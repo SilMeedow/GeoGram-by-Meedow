@@ -29,4 +29,4 @@ pip install -r requirements.txt
 This tool is for educational and ethical OSINT purposes only. Do not use for stalking or unauthorized tracking.
 
 ## 👤 Author
-- **GitHub**: [@meedow]
+- **GitHub**: [@silmeedow]
