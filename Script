@@ -1,0 +1,56 @@
+import os
+from PIL import Image
+from PIL.ExifTags import TAGS, GPSTAGS
+import gmplot
+
+class GeoGram:
+    def __init__(self, folder_path):
+        self.folder_path = folder_path
+        self.coords = []
+
+    def get_decimal_from_dms(self, dms, ref):
+        degrees = dms[0]
+        minutes = dms[1] / 60.0
+        seconds = dms[2] / 3600.0
+        if ref in ['S', 'W']:
+            return -float(degrees + minutes + seconds)
+        return float(degrees + minutes + seconds)
+
+    def extract_gps(self):
+        for filename in os.listdir(self.folder_path):
+            if filename.lower().endswith(('jpg', 'jpeg', 'png')):
+                img_path = os.path.join(self.folder_path, filename)
+                image = Image.open(img_path)
+                exif_data = image._getexif()
+                
+                if exif_data:
+                    gps_info = {}
+                    for tag, value in exif_data.items():
+                        decoded = TAGS.get(tag, tag)
+                        if decoded == "GPSInfo":
+                            for t in value:
+                                sub_decoded = GPSTAGS.get(t, t)
+                                gps_info[sub_decoded] = value[t]
+                    
+                    if 'GPSLatitude' in gps_info:
+                        lat = self.get_decimal_from_dms(gps_info['GPSLatitude'], gps_info['GPSLatitudeRef'])
+                        lon = self.get_decimal_from_dms(gps_info['GPSLongitude'], gps_info['GPSLongitudeRef'])
+                        self.coords.append((lat, lon))
+                        print(f"[+] Found coordinates in {filename}: {lat}, {lon}")
+
+    def generate_map(self):
+        if not self.coords:
+            print("[-] No GPS data found.")
+            return
+        
+        gmap = gmplot.GoogleMapPlotter(self.coords[0][0], self.coords[0][1], 13)
+        lats, lons = zip(*self.coords)
+        gmap.scatter(lats, lons, '#FF0000', size=40, marker=True)
+        gmap.draw("map_results.html")
+        print("[*] Map saved to map_results.html")
+
+if __name__ == "__main__":
+    path = input("Enter path to images folder: ")
+    tool = GeoGram(path)
+    tool.extract_gps()
+    tool.generate_map()
